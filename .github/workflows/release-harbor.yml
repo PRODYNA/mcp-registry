@@ -1,0 +1,55 @@
+name: Release to Harbor
+
+# PRODYNA fork only. This is a separate file so upstream syncs never conflict with it.
+# Create a GitHub release with a tag like v1.8.1-prodyna.1 to build and push the image.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  ko-push:
+    name: Build and push image to Harbor
+    if: github.repository == 'PRODYNA/mcp-registry'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up ko
+        uses: ko-build/setup-ko@v0.10
+
+      - name: Log in to Harbor
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        with:
+          registry: harbor.prodyna.com
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: Get build timestamp and version
+        id: build-info
+        run: |
+          echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          # refs/tags/v1.8.1-prodyna.1 -> 1.8.1-prodyna.1
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "version=${VERSION#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push with ko
+        env:
+          KO_DOCKER_REPO: harbor.prodyna.com/mcp/registry
+          VERSION: ${{ steps.build-info.outputs.version }}
+          GIT_COMMIT: ${{ github.sha }}
+          BUILD_TIME: ${{ steps.build-info.outputs.timestamp }}
+        run: |
+          ko build ./cmd/registry \
+            --bare \
+            --platform=linux/amd64,linux/arm64 \
+            --tags="${VERSION}"
