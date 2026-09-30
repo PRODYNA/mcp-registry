@@ -2,11 +2,19 @@ package registries_test
 
 import (
 	"context"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/modelcontextprotocol/registry/internal/validators/registries"
 	"github.com/modelcontextprotocol/registry/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateOCI_RegistryAllowlist(t *testing.T) {
@@ -313,4 +321,45 @@ func TestValidateOCI_LabelMismatch(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "ownership validation failed")
 	assert.Contains(t, err.Error(), "Expected annotation")
+}
+
+func TestValidateOCI_AdditionalRegistry(t *testing.T) {
+	const serverName = "com.example/test"
+
+	srv := httptest.NewServer(registry.New())
+	defer srv.Close()
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+	host := u.Host
+
+	img, err := random.Image(64, 1)
+	require.NoError(t, err)
+	cfgFile, err := img.ConfigFile()
+	require.NoError(t, err)
+	cfgFile.Config.Labels = map[string]string{"io.modelcontextprotocol.server.name": serverName}
+	img, err = mutate.ConfigFile(img, cfgFile)
+	require.NoError(t, err)
+
+	ref, err := name.ParseReference(host + "/owner/image:1.0.0")
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(ref, img))
+
+	pkg := model.Package{RegistryType: model.RegistryTypeOCI, Identifier: ref.String()}
+	ctx := context.Background()
+
+	t.Run("rejected when not configured", func(t *testing.T) {
+		err := registries.ValidateOCI(ctx, pkg, serverName)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported OCI registry")
+	})
+
+	t.Run("accepted when configured", func(t *testing.T) {
+		assert.NoError(t, registries.ValidateOCI(ctx, pkg, serverName, host))
+	})
+
+	t.Run("label mismatch still fails", func(t *testing.T) {
+		err := registries.ValidateOCI(ctx, pkg, "com.example/other", host)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ownership validation failed")
+	})
 }

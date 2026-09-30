@@ -41,6 +41,7 @@ var allowedOCIRegistries = map[string]bool{
 }
 
 // ValidateOCI validates that an OCI image contains the correct MCP server name annotation.
+// additionalRegistries adds exact registry hosts to the built-in allowlist.
 // Supports canonical OCI references including:
 //   - registry/namespace/image:tag
 //   - registry/namespace/image@sha256:digest
@@ -53,7 +54,8 @@ var allowedOCIRegistries = map[string]bool{
 //   - Quay.io (quay.io)
 //   - Google Artifact Registry (*.pkg.dev)
 //   - Microsoft Container Registry (mcr.microsoft.com)
-func ValidateOCI(ctx context.Context, pkg model.Package, serverName string) error {
+//   - Additional exact hosts configured with MCP_REGISTRY_ADDITIONAL_OCI_REGISTRIES
+func ValidateOCI(ctx context.Context, pkg model.Package, serverName string, additionalRegistries ...string) error {
 	if pkg.Identifier == "" {
 		return ErrMissingIdentifierForOCI
 	}
@@ -78,7 +80,7 @@ func ValidateOCI(ctx context.Context, pkg model.Package, serverName string) erro
 
 	// Validate that the registry is in the allowlist
 	registry := ref.Context().RegistryStr()
-	if !isAllowedRegistry(registry) {
+	if !isAllowedRegistry(registry, additionalRegistries) {
 		return fmt.Errorf("%w: %s", ErrUnsupportedRegistry, registry)
 	}
 
@@ -146,10 +148,18 @@ func ValidateOCI(ctx context.Context, pkg model.Package, serverName string) erro
 
 // isAllowedRegistry checks if the given registry is in the allowlist.
 // It handles registry aliases and wildcard patterns (e.g., *.pkg.dev for Artifact Registry).
-func isAllowedRegistry(registry string) bool {
+func isAllowedRegistry(registry string, additionalRegistries []string) bool {
 	// Direct match
 	if allowedOCIRegistries[registry] {
 		return true
+	}
+
+	// Custom registries are exact host matches; unlike built-in cloud registries,
+	// custom entries do not implicitly allow subdomains.
+	for _, additionalRegistry := range additionalRegistries {
+		if additionalRegistry != "" && strings.EqualFold(registry, strings.TrimSpace(additionalRegistry)) {
+			return true
+		}
 	}
 
 	// Check for wildcard patterns

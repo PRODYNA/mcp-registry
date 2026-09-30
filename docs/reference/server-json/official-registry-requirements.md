@@ -41,6 +41,7 @@ Only trusted public registries are supported. Private registries and alternative
   - Google Artifact Registry (`*.pkg.dev`)
   - Azure Container Registry (`*.azurecr.io`)
   - Microsoft Container Registry (`mcr.microsoft.com`)
+  - The official registry does not add to this list. Self-hosted registries can allow extra exact hosts with `MCP_REGISTRY_ADDITIONAL_OCI_REGISTRIES`; images must still be publicly pullable.
 - **MCPB**: `https://github.com` releases and `https://gitlab.com` releases only
 
 ## `_meta` Namespace Restrictions

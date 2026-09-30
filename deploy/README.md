@@ -156,6 +156,7 @@ Configuration keys are namespaced. Set them with `pulumi config set <key> [--sec
 | `mcp-registry:githubClientId` | GitHub OAuth Client ID | Yes |
 | `mcp-registry:githubClientSecret` | GitHub OAuth Client Secret | Yes (secret) |
 | `mcp-registry:jwtPrivateKey` | Ed25519 seed used to sign registry JWTs | Yes (secret) |
+| `mcp-registry:additionalOciRegistries` | Optional comma-separated exact OCI registry hosts to allow | No |
 | `mcp-registry:googleOauthClientSecret` | Google OAuth client secret for Grafana login | Yes (secret) |
 | `mcp-registry:imageTag` | Docker image tag for production environment | Yes (prod only) |
 | `gcp:project` | GCP Project ID | Yes when `provider=gcp` |

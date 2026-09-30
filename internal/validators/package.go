@@ -11,7 +11,7 @@ import (
 // ValidatePackage validates that the package referenced in the server configuration is:
 // 1. allowed on the official registry (based on registry base url); and
 // 2. owned by the publisher, by checking for a matching server name in the package metadata
-func ValidatePackage(ctx context.Context, pkg model.Package, serverName string) error {
+func ValidatePackage(ctx context.Context, pkg model.Package, serverName string, additionalOCIRegistries ...string) error {
 	switch pkg.RegistryType {
 	case model.RegistryTypeNPM:
 		return registries.ValidateNPM(ctx, pkg, serverName)
@@ -20,7 +20,7 @@ func ValidatePackage(ctx context.Context, pkg model.Package, serverName string) 
 	case model.RegistryTypeNuGet:
 		return registries.ValidateNuGet(ctx, pkg, serverName)
 	case model.RegistryTypeOCI:
-		return registries.ValidateOCI(ctx, pkg, serverName)
+		return registries.ValidateOCI(ctx, pkg, serverName, additionalOCIRegistries...)
 	case model.RegistryTypeMCPB:
 		return registries.ValidateMCPB(ctx, pkg, serverName)
 	case model.RegistryTypeCargo:

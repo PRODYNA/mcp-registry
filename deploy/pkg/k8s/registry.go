@@ -32,6 +32,7 @@ func getGitCommitHash() string {
 func DeployMCPRegistry(ctx *pulumi.Context, cluster *providers.ProviderInfo, environment string, ingressNginx *helm.Chart, pgCluster *apiextensions.CustomResource) (*corev1.Service, error) {
 	conf := config.New(ctx, "mcp-registry")
 	githubClientId := conf.Require("githubClientId")
+	additionalOCIRegistries := conf.Get("additionalOciRegistries")
 
 	// Determine Docker image tag based on environment
 	imageTag := "main" // Default for staging
@@ -193,6 +194,10 @@ func DeployMCPRegistry(ctx *pulumi.Context, cluster *providers.ProviderInfo, env
 										}
 										return "https://" + environment + ".registry.modelcontextprotocol.io"
 									}()),
+								},
+								&corev1.EnvVarArgs{
+									Name:  pulumi.String("MCP_REGISTRY_ADDITIONAL_OCI_REGISTRIES"),
+									Value: pulumi.String(additionalOCIRegistries),
 								},
 							},
 							// StartupProbe protects the DB-retry budget in cmd/registry/main.go:

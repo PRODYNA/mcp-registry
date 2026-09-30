@@ -649,7 +649,7 @@ func ValidatePublishRequest(ctx context.Context, req apiv0.ServerJSON, cfg *conf
 
 	// Validate registry ownership for all packages if validation is enabled
 	if cfg.EnableRegistryValidation {
-		if err := validateRegistryOwnership(ctx, req); err != nil {
+		if err := validateRegistryOwnership(ctx, req, cfg.AdditionalOCIRegistries); err != nil {
 			return err
 		}
 	}
@@ -661,7 +661,7 @@ func ValidatePublishRequest(ctx context.Context, req apiv0.ServerJSON, cfg *conf
 // Note: ValidateServerJSON should be called separately before this function
 func ValidateUpdateRequest(ctx context.Context, req apiv0.ServerJSON, cfg *config.Config, skipRegistryValidation bool) error {
 	if cfg.EnableRegistryValidation && !skipRegistryValidation {
-		if err := validateRegistryOwnership(ctx, req); err != nil {
+		if err := validateRegistryOwnership(ctx, req, cfg.AdditionalOCIRegistries); err != nil {
 			return err
 		}
 	}
@@ -669,9 +669,9 @@ func ValidateUpdateRequest(ctx context.Context, req apiv0.ServerJSON, cfg *confi
 	return nil
 }
 
-func validateRegistryOwnership(ctx context.Context, req apiv0.ServerJSON) error {
+func validateRegistryOwnership(ctx context.Context, req apiv0.ServerJSON, additionalOCIRegistries []string) error {
 	for i, pkg := range req.Packages {
-		if err := ValidatePackage(ctx, pkg, req.Name); err != nil {
+		if err := ValidatePackage(ctx, pkg, req.Name, additionalOCIRegistries...); err != nil {
 			return fmt.Errorf("registry validation failed for package %d (%s): %w", i, pkg.Identifier, err)
 		}
 	}

@@ -191,6 +191,8 @@ For Docker/OCI images, the MCP Registry currently supports:
 - Azure Container Registry (`*.azurecr.io`)
 - Microsoft Container Registry (`mcr.microsoft.com`)
 
+Operators of a self-hosted registry can allow additional OCI registry hosts by setting `MCP_REGISTRY_ADDITIONAL_OCI_REGISTRIES` to a comma-separated list of exact hostnames (optionally with a port, e.g. `registry.example.com,registry.internal:5000`). The public registries above remain allowed. Images are still verified anonymously, so images on a custom registry must be publicly pullable.
+
 Docker/OCI images use `"registryType": "oci"` in `server.json`. For example:
 
 ```json server.json highlight={9}

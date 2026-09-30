@@ -1949,6 +1949,27 @@ func TestValidate_RegistryTypesAndUrls(t *testing.T) {
 	}
 }
 
+func TestValidatePublishRequestAllowsConfiguredOCIRegistry(t *testing.T) {
+	serverJSON := apiv0.ServerJSON{
+		Name: "com.example/test-server",
+		Packages: []model.Package{
+			{
+				RegistryType: model.RegistryTypeOCI,
+				Identifier:   "127.0.0.1:1/owner/image:latest",
+			},
+		},
+	}
+
+	err := validators.ValidatePublishRequest(context.Background(), serverJSON, &config.Config{
+		EnableRegistryValidation: true,
+		AdditionalOCIRegistries:  []string{"127.0.0.1:1"},
+	})
+
+	if assert.Error(t, err) {
+		assert.NotContains(t, err.Error(), "unsupported OCI registry")
+	}
+}
+
 func createValidServerWithArgument(arg model.Argument) apiv0.ServerJSON {
 	return apiv0.ServerJSON{
 		Schema:      model.CurrentSchemaURL,
